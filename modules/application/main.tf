@@ -130,14 +130,13 @@ resource "aws_autoscaling_group" "this" {
   min_size                  = 2
   max_size                  = 2
   vpc_zone_identifier       = var.subnet_ids
-  target_group_arns         = [aws_lb_target_group.this.arn]
   health_check_type         = "ELB"
   health_check_grace_period = 120
   wait_for_elb_capacity     = 2
 
   launch_template {
     id      = aws_launch_template.this.id
-    version = "$Latest"
+    version = aws_launch_template.this.latest_version
   }
 
   lifecycle {
@@ -160,6 +159,15 @@ resource "aws_autoscaling_group" "this" {
     key                 = "Project"
     value               = var.project_id
     propagate_at_launch = true
+  }
+  instance_refresh {
+    strategy = "Rolling"
+
+    preferences {
+      min_healthy_percentage = 50
+    }
+
+    triggers = ["launch_template"]
   }
 }
 
