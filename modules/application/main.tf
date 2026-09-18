@@ -33,10 +33,21 @@ resource "aws_launch_template" "this" {
               INSTANCE_ID=$(curl -s -S -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/instance-id)
               PRIVATE_IP=$(curl -s -S -H "X-aws-ec2-metadata-token: $TOKEN" http://169.254.169.254/latest/meta-data/local-ipv4)
 
+              # Генеруємо унікальний UUID для кожного інстансу
+              MY_UUID=$(cat /proc/sys/kernel/random/uuid 2>/dev/null || cat /sys/devices/virtual/dmi/id/product_uuid 2>/dev/null || echo "$INSTANCE_ID")
+
               mkdir -p /var/www/html
+
               cat <<HTML > /var/www/html/index.html
+              <!DOCTYPE html>
+              <html>
+              <body>
               <h1>Hello from $INSTANCE_ID</h1>
+              <p>UUID: $MY_UUID</p>
               <p>Private IP: $PRIVATE_IP</p>
+              <p>Instance ID: $INSTANCE_ID</p>
+              </body>
+              </html>
               HTML
 
               if ! systemctl is-active --quiet httpd; then
@@ -115,6 +126,7 @@ resource "aws_autoscaling_group" "this" {
   desired_capacity    = 2
   min_size            = 2
   max_size            = 2
+  target_group_arns   = [aws_lb_target_group.this.arn]
   vpc_zone_identifier = var.subnet_ids
 
   launch_template {
